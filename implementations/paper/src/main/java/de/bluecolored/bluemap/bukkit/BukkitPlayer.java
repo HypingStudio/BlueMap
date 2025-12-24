@@ -142,6 +142,7 @@ public class BukkitPlayer extends Player {
         for (MetadataValue meta : player.getMetadata("vanished")) {
             if (meta.asBoolean()) vanished = true;
         }
+        if (player.hasPermission("bluemap.hide")) vanished = true;
         this.vanished = vanished;
 
         this.name = Text.of(player.getName());
