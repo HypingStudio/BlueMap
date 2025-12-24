@@ -163,9 +163,37 @@ export class BlueMapApp {
 
         // switch to map
         try {
-            if (!await this.loadPageAddress()) {
-                if (this.maps.length > 0) await this.switchMap(this.maps[0].data.id);
-                this.resetCamera();
+            const urlParams = new URLSearchParams(window.location.search);
+            const followPlayer = urlParams.has("follow");
+
+            if (!followPlayer) {
+                if (!await this.loadPageAddress()) {
+                    if (this.maps.length > 0) await this.switchMap(this.maps[0].data.id);
+                    this.resetCamera();
+                }
+            } else {
+                // follow mode: ignore hash camera positioning
+                if (this.maps.length > 0) {
+                    await this.switchMap(this.maps[0].data.id);
+                }
+            }
+
+            if (followPlayer) {
+                const playerName = urlParams.get("follow");
+                const uuid = await this.getUuidFromPlayerName(playerName);
+
+                if (!uuid) return;
+
+                let marker = null;
+                for (let i = 0; i < 50; i++) {
+                    marker = this.playerMarkerManager.getPlayerMarker(uuid);
+                    if (marker) break;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+
+                if (marker) {
+                    this.mapViewer.controlsManager.controls.followPlayerMarker(marker);
+                }
             }
         } catch (e) {
             console.error("Failed to load map!", e);
@@ -190,6 +218,57 @@ export class BlueMapApp {
             alert(this.events, "Loading script: " + scriptUrl, "fine");
             document.body.appendChild(scriptElement);
         }
+
+        // Check if we should follow a player from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerNameToFollow = urlParams.get("follow");
+        if (playerNameToFollow) {
+            // Wait for map and player manager to initialize
+            await this.waitForMapAndPlayerManager();
+
+            const playerUuid = await this.getUuidFromPlayerName(playerNameToFollow);
+            if (!playerUuid) {
+                alert(this.events, `Could not find UUID for player "${playerNameToFollow}"`, "warning");
+                return;
+            }
+
+            // Wait for the player marker to exist (retry for up to 5 seconds)
+            let playerMarker = null;
+            for (let i = 0; i < 50; i++) { // 50 attempts, 100ms apart = 5s max
+                playerMarker = this.playerMarkerManager.getPlayerMarker(playerUuid);
+                if (playerMarker) break;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            if (playerMarker) {
+                // Follow the player marker
+                this.mapViewer.controlsManager.controls.followPlayerMarker(playerMarker);
+            } else {
+                alert(this.events, `Player "${playerNameToFollow}" not found on the map!`, "warning");
+            }
+        }
+    }
+
+    // Wait until a map and player marker manager are available
+    async waitForMapAndPlayerManager() {
+        while (!this.mapViewer.map || !this.playerMarkerManager) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+
+    // Simple Mojang API lookup for UUID
+    async getUuidFromPlayerName(name) {
+        for (const map of this.maps) {
+            const data = await this.loadPlayerData(map);
+            if (!Array.isArray(data.players)) continue;
+
+            for (const p of data.players) {
+                if (p.name?.toLowerCase() === name.toLowerCase()) {
+                    return p.uuid;
+                }
+            }
+        }
+        return null;
     }
 
     update = async () => {

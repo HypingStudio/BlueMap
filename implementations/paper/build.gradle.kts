@@ -10,7 +10,11 @@ val supportedMinecraftVersions = listOf(
 
 val minecraftVersion = supportedMinecraftVersions.first()
 val paperVersion = "${minecraftVersion}-R0.1-SNAPSHOT"
-val apiVersion = "1.21.6" // paper-version but without minor
+val apiVersion = "1.21.4" // paper-version but without minor
+
+repositories {
+    maven("https://repo.extendedclip.com/releases/")
+}
 
 dependencies {
     api ( project( ":common" ) ) {
@@ -23,6 +27,7 @@ dependencies {
     api ( libs.bluecommands.brigadier ) {
         exclude ( group = "com.mojang", module = "brigadier" )
     }
+    compileOnly("me.clip:placeholderapi:2.11.7")
 }
 
 tasks.shadowJar {
