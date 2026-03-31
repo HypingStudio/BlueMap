@@ -505,10 +505,10 @@ export class BlueMapApp {
         const map = this.mapViewer.map;
         if (!map) return;
 
-        this.markerFileManager = new NormalMarkerManager(this.mapViewer.markers, map.data.liveDataRoot + "/live/markers.json", this.events);
+        this.markerFileManager = new NormalMarkerManager(this.mapViewer.markers, map.data.liveDataRoot + "/live/markers.json", this.events, this.mapViewer.controlsManager);
         return this.markerFileManager.update()
             .then(() => {
-                this.markerFileManager.setAutoUpdateInterval(1000 * 10);
+                this.markerFileManager.setAutoUpdateInterval(1000 * 30);
             })
             .catch(e => {
                 alert(this.events, e, "warning");
